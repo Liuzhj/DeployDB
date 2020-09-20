@@ -1,0 +1,21 @@
+listen pg_master
+    bind *:5000
+    mode tcp
+    option httplog
+    option httpchk OPTIONS /master
+    http-check expect status 200
+    default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+{% for host in groups.pg_cluster %}
+    server postgresql_{{ host }}_5432 {{ host }}:5432  maxconn 100 check port 8008
+{% endfor %}
+
+listen pg_replicas
+    bind *:5001
+    mode tcp
+    option httplog
+    option httpchk OPTIONS /replica
+    http-check expect status 200
+    default-server inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+{% for host in groups.pg_cluster %}
+    server postgresql_{{ host }}_5432 {{ host }}:5432  maxconn 100 check port 8008
+{% endfor %}

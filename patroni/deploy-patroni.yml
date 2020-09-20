@@ -1,0 +1,8 @@
+---
+- hosts: etcd_cluster
+  roles:
+   - etcd
+   
+- hosts: pg_cluster
+  roles:
+   - patroni

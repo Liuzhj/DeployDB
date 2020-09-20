@@ -1,0 +1,91 @@
+---
+- name: install pkgs for patroni
+  yum:
+   name: 
+    - python3-psycopg2
+    - python3
+    - python3-pip
+    - python3-devel
+    - gcc
+
+- name: install patroni if {{ pypi_server }} is defined
+  when: pypi_server is defined
+  pip:
+   name:
+    - patroni=={{ patroni_version }}
+    - python-etcd
+   executable: pip3
+   extra_args: -i {{ pypi_server }}
+   
+- name: install patroni if {{ pypi_server }} is not defined
+  when: pypi_server is not defined
+  pip:
+   name:
+    - patroni=={{ patroni_version }}
+    - python-etcd
+   executable: pip3
+
+- name: add env variables to postgres
+  blockinfile:
+   path: /var/lib/pgsql/.bash_profile
+   block: |
+    # PostgreSQL
+    export PGDATA={{ pg_data_dir }}
+    export PGHOME={{ pg_home }}
+    export PATH=$PGHOME/bin:$PATH
+    # Patroni
+    export PATRONI_NAMESPACE=/{{ patroni_namespace }}/
+
+- name: create directory /etc/patroni
+  file:
+   path: '{{ item }}'
+   state: directory
+   owner: postgres
+   group: postgres
+  with_items:
+   - /etc/patroni
+   - '{{ patroni_logdir }}'
+   - '{{ pg_archdir }}'
+   - '{{ pg_logdir }}'
+
+- name: create pg_data directory
+  file:
+   path: '{{ pg_data_dir }}'
+   state: directory
+   mode: 0700
+   owner: postgres
+   group: postgres
+
+- name: enable watch dog
+  modprobe:
+   name: softdog
+
+- name: chmod /dev/watchdog
+  file:
+   dest: /dev/watchdog
+   owner: postgres
+   group: postgres
+
+- name: config for systemd
+  copy:
+   src: patroni.service
+   dest: /etc/systemd/system/
+
+- name: configure patroni
+  template:
+   src: patroni.yml.j2
+   dest: /etc/patroni/patroni.yml
+
+- name: start patroni
+  systemd:
+   name: patroni
+   state: restarted
+   enabled: no
+   
+- name: generate haproxy.cfg
+  template:
+   src: haproxy.cfg.j2
+   dest: /tmp/haproxy.cfg
+  delegate_to: localhost
+  run_once: yes
+  tags: ha

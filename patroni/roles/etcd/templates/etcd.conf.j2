@@ -1,0 +1,9 @@
+ETCD_NAME={{ etcd_name }}{{groups.etcd_cluster.index(inventory_hostname)}}
+ETCD_DATA_DIR="{{ etcd_data_dir }}"
+ETCD_LISTEN_PEER_URLS="http://{{ ansible_default_ipv4.address }}:{{ etcd_initial_port }}"
+ETCD_LISTEN_CLIENT_URLS="http://localhost:{{ etcd_port }},http://{{ ansible_default_ipv4.address }}:{{ etcd_port }}"
+ETCD_INITIAL_ADVERTISE_PEER_URLS="http://{{ ansible_default_ipv4.address }}:{{ etcd_initial_port }}"
+ETCD_INITIAL_CLUSTER="{% for host in groups['etcd_cluster'] %}{{ etcd_name }}{{ loop.index0 }}=http://{{host}}:{{ etcd_initial_port }}{%- if not loop.last %},{% endif -%}{% endfor %}"
+ETCD_ADVERTISE_CLIENT_URLS="http://{{ ansible_default_ipv4.address }}:{{ etcd_port }}"
+ETCD_INITIAL_CLUSTER_TOKEN="{{ etcd_initial_cluster_token }}"
+ETCD_INITIAL_CLUSTER_STATE="new"

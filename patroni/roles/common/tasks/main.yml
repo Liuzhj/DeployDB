@@ -1,0 +1,13 @@
+---
+- name: remove old postgresql if exists
+  yum:
+   name: postgresql-9.2.24
+   state: absent
+  ignore_errors: yes
+
+- name: install packages
+  yum:
+   name:
+    - postgresql{{ pg_fullversion.split(".")[0] }}-server-{{ pg_fullversion }}
+    - postgresql{{ pg_fullversion.split(".")[0] }}-contrib-{{ pg_fullversion }}
+

@@ -1,0 +1,109 @@
+scope: {{ patroni_scope }}
+namespace: /{{ patroni_namespace }}/
+name: {{ patroin_name }}{{ groups.pg_cluster.index(inventory_hostname) }}
+
+log:
+    dir: {{ patroni_logdir }}
+
+restapi:
+    listen: {{ ansible_default_ipv4.address }}:8008
+    connect_address: {{ ansible_default_ipv4.address }}:8008
+
+etcd:
+{% if groups.etcd_cluster | length == 1 %}
+    host: {{groups.etcd_cluster[0]}}:{{ etcd_port }}
+{% else %}
+    hosts: {% for host in groups['etcd_cluster'] %}{{ host }}:{{ etcd_port }} {%- if not loop.last %},{% endif -%}{% endfor %}
+{% endif %}
+
+bootstrap:
+    dcs:
+        ttl: 30
+        loop_wait: 10
+        retry_timeout: 10
+        maximum_lag_on_failover: 1048576
+        postgresql:
+            use_pg_rewind: true
+            parameters:
+                max_connections                        : {{ max_connections }}
+                superuser_reserved_connections         : 13
+                unix_socket_permissions                : 0700
+                datestyle                              : iso, ymd
+                timezone                               : Asia/Shanghai
+                lc_messages                            : en_US.UTF-8
+                lc_monetary                            : en_US.UTF-8
+                lc_numeric                             : en_US.UTF-8
+                lc_time                                : en_US.UTF-8
+                default_text_search_config             : pg_catalog.english
+                tcp_keepalives_idle                    : 60
+                tcp_keepalives_interval                : 10
+                tcp_keepalives_count                   : 10
+                unix_socket_directories                : /tmp,.
+                shared_buffers                         : {{ (ansible_memtotal_mb * 0.25) | int }}MB
+                work_mem                               : 8MB
+                maintenance_work_mem                   : 512MB
+                shared_preload_libraries               : {{ pg_shared_preload_libraries }}
+                vacuum_cost_delay                      : 0
+                vacuum_cost_page_miss                  : 5
+                vacuum_cost_page_dirty                 : 10
+                vacuum_cost_limit                      : 10000
+                bgwriter_delay                         : 10ms
+                wal_level                              : replica
+                synchronous_commit                     : "off"
+                wal_writer_delay                       : 10ms
+                archive_mode                           : "on"
+                archive_command                        : test ! -f {{ pg_archdir }}/%f && cp %p {{ pg_archdir }}/%f
+                archive_timeout                        : 5min
+                idle_in_transaction_session_timeout    : 1h
+                deadlock_timeout                       : 1s
+                log_lock_waits                         : "on"
+                log_error_verbosity                    : verbose
+                log_line_prefix                        : '%t [%p-%l] %r %q%u@%d '
+                checkpoint_timeout                     : 30min
+                max_wal_size                           : 20GB
+                min_wal_size                           : 5GB
+                wal_buffers                            : 512MB
+                max_standby_archive_delay              : 300s
+                max_standby_streaming_delay            : 300s
+                wal_receiver_status_interval           : 1s
+                log_destination                        : csvlog
+                logging_collector                      : "on"
+                log_directory                          : {{ pg_logdir }}
+                log_filename                           : '{{ pg_log_filename }}'
+                log_file_mode                          : 0600
+                log_truncate_on_rotation               : "on"
+                log_rotation_age                       : 1d
+                log_rotation_size                      : 10MB
+                log_min_duration_statement             : 1
+    initdb:
+    - encoding: {{ postgresql_encoding }}
+    - data-checksums
+
+    pg_hba:
+    - host replication replicator 127.0.0.1/32 md5
+{% for host in groups['pg_cluster'] %}
+    - host replication replicator {{ host }}/0 md5
+{% endfor %}
+    - host all all 0.0.0.0/0 md5
+
+postgresql:
+    listen: 0.0.0.0:5432
+    connect_address: {{ ansible_default_ipv4.address }}:5432
+    data_dir: {{ pg_data_dir }}
+    bin_dir: {{ pg_bin_dir }}
+    pgpass: /tmp/pgpass
+    authentication:
+        replication:
+            username: {{ pg_repl_user }}
+            password: {{ pg_repl_passwd }}
+        superuser:
+            username: {{ pg_user }}
+            password: {{ pg_passwd }}
+    parameters:
+        unix_socket_directories: '.'
+
+tags:
+    nofailover: false
+    noloadbalance: false
+    clonefrom: false
+    nosync: false
