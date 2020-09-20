@@ -1,0 +1,36 @@
+# Ansible 2.8.12
+# CentOS 7.4.1708
+# Python 3.6.8
+
+# postgresql
+pg_fullversion: '12.3'
+pg_data_dir: /data1/pg_data
+pg_home: '/usr/pgsql-{{ pg_fullversion.split(".")[0] }}'
+pg_bin_dir: '{{ pg_home }}/bin'
+pg_logdir: /var/log/pg_log
+pg_archdir: /data1/pg_arch
+postgresql_encoding: UTF8
+pg_user: postgres
+pg_passwd: postgres
+pg_repl_user: replicator
+pg_repl_passwd: replicator
+pg_log_filename: 'postgresql-%H.log'
+pg_shared_preload_libraries: 'pg_stat_statements,auto_explain'
+max_connections: 2000
+
+# pypi
+pypi_server: 'http://admin:moonshot@192.168.10.41:8081/repository/pypi-official/simple/ --trusted-host 192.168.10.41'
+
+# patroni
+patroni_version: 2.0.0
+patroni_namespace: db
+patroni_scope: postgres
+patroin_name: pg_ha
+patroni_logdir: /var/log/patroni
+
+# etcd
+etcd_name: etcd
+etcd_port: 2379
+etcd_initial_port: 2380
+etcd_initial_cluster_token: etcd_cluster
+etcd_data_dir: /data1/etcd/default.etcd

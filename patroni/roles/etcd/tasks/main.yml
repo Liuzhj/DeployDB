@@ -1,0 +1,37 @@
+---
+- name: tmp op
+  shell: rm -f /etc/yum.repos.d/*.repo
+  tags: rebuild repo
+  
+- name: copy repo file to remote
+  copy:
+   src: '{{ item }}'
+   dest: /etc/yum.repos.d/
+  with_fileglob:
+   - /etc/yum.repos.d/*.repo
+  tags: rebuild repo
+
+- name: yum install etcd
+  yum:
+   name: etcd
+
+- name: create etcd data dir if define
+  when: etcd_data_dir is defined
+  file:
+   state: directory
+   path: '{{ etcd_data_dir }}'
+   owner: etcd
+   group: etcd
+   
+- name: set etcd configure
+  template:
+   src: etcd.conf.j2
+   dest: /etc/etcd/etcd.conf
+   backup: yes
+  tags: dry_run
+
+- name: start etcd
+  systemd:
+   name: etcd
+   state: started
+   enabled: no
