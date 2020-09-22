@@ -10,7 +10,7 @@
   - MGR
   - PXC
   - Mysql Cluster
-- [ ] Redis
+- [x] Redis
   - Redis 集群 + 哨兵
 - [ ] MongoDB
   - 副本集
@@ -22,9 +22,9 @@
 - [ ] HDP
   - Hortonworks Data Platform
 
-## 作者简介(求职中)
+## 作者简介
 
-高级数据库工程师
+高级数据库工程师 邮箱: zhupan208@163.com
 
 大型项目交付经验，自动化运维，丰富的数据库管理经验，主要负责 MySQL、PostgreSQL 和 Oracle 相关的数据库运维工作。
 
