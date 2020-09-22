@@ -1,0 +1,8 @@
+# redis
+redis_base_dir: /usr/local/redis
+redis_packages_dir: /usr/local/src/redis/
+redis_package: redis-3.2.8.tar.gz
+redis_port: 6379
+redis_sentine_port: 26379
+# run as with another user, 'redis' is default if disable
+redis_user: redis

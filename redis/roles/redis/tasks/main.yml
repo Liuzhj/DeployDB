@@ -1,0 +1,85 @@
+---
+- name: create redis user
+  user:
+   name: "{{ redis_user }}"
+   state: present
+
+- name: install gcc
+  yum: name=gcc
+
+- name: transfer redis install package to remote
+  unarchive:
+   src: "{{ redis_package }}"
+   dest: /tmp
+   owner: "{{ redis_user }}"
+   group: "{{ redis_user }}"
+
+- name: copy script
+  template:
+    src: install_redis.sh.j2
+    dest: /tmp/install_redis.sh
+
+- name: exec compile
+  shell: /bin/bash /tmp/install_redis.sh
+
+- name: create datadir
+  file:
+    path: "{{ redis_base_dir }}/{{ item }}"
+    state: directory
+    owner: "{{ redis_user }}"
+    group: "{{ redis_user }}"
+  with_items:
+     - log
+     - etc
+     - data
+
+- name: config redis.conf
+  template:
+    src: redis.conf.j2
+    dest: "{{redis_base_dir}}/etc/redis_{{redis_port}}.conf"
+    owner: "{{ redis_user }}"
+    group: "{{ redis_user }}"
+
+- name: create slave config
+  when: ansible_default_ipv4.address in slaves
+  lineinfile:
+   path: "{{redis_base_dir}}/etc/redis_{{redis_port}}.conf"
+   line: slaveof {{master_ip}} {{redis_port}}
+  tags:
+   - change_slave_config
+
+- name: start master redis
+  when: ansible_default_ipv4.address in master
+  shell: redis-server redis_{{ redis_port }}.conf
+  args:
+    chdir: "{{ redis_base_dir }}/etc/"
+
+- name: start slave redis
+  when: ansible_default_ipv4.address in slaves
+  shell: redis-server redis_{{ redis_port }}.conf
+  args:
+    chdir: "{{ redis_base_dir }}/etc/"
+
+- block:
+  when: ansible_default_ipv4.address in sentinels
+  - name: create sentinel config
+    template:
+      src: sentinel.conf.j2
+      dest: "{{redis_base_dir}}/etc/"
+      owner: "{{ redis_user }}"
+      group: "{{ redis_user }}"
+  
+  - name: start sentinel
+    shell: redis-sentinel sentinel.conf
+    args:
+      chdir: "{{ redis_base_dir }}/etc/"
+
+- name: remove /tmp/install_redis.sh
+  file:
+   dest: /tmp/install_redis.sh
+   state: absent
+
+- name: remove package dir
+  file:
+    path: /tmp/{{ redis_package | replace('.tar.gz','') }}
+    state: absent
