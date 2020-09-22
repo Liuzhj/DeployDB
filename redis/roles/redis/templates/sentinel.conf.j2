@@ -1,0 +1,9 @@
+port       {{redis_sentine_port}}
+daemonize  yes
+dir        {{redis_base_dir}}/data
+logfile    "{{redis_base_dir}}/log/sentinel.log"
+sentinel   monitor mymaster {{master_ip}} {{redis_port}} 2
+sentinel   down-after-milliseconds mymaster 30000
+sentinel   parallel-syncs mymaster 1
+sentinel   failover-timeout mymaster 180000
+protected-mode no

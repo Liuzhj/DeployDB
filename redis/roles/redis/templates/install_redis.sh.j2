@@ -1,0 +1,5 @@
+#!/bin/bash
+cd /tmp/{{ redis_package | replace('.tar.gz','') }}
+make
+cd src
+make install
