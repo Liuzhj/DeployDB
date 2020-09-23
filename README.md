@@ -3,7 +3,7 @@
 
 此项目包含多种数据库集群的安装，长期更新中，敬请关注，喜欢的朋友请给个 Start 支持一下，您的支持是给我最好的动力。
 
-![](https://raw.githubusercontent.com/Liuzhj/picrepo/master/img/20200923163200.png)
+![](https://raw.githubusercontent.com/Liuzhj/picrepo/master/img/good_job.gif)
 
 - [x] PostgreSQL
   - Patroni
