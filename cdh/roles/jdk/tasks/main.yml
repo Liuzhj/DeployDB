@@ -1,0 +1,62 @@
+---
+ - name: install dependent package
+   yum: 
+    name: "{{item}}"
+   with_items:
+    - chkconfig 
+    - python 
+    - bind-utils 
+    - psmisc 
+    - libxslt 
+    - zlib 
+    - sqlite 
+    - cyrus-sasl-plain 
+    - cyrus-sasl-gssapi 
+    - fuse 
+    - rpcbind 
+    - fuse-libs 
+    - redhat-lsb 
+    - libaio
+
+ - name: start rpcbind centos 7.X
+   when: ansible_distribution_major_version == "7"
+   systemd:
+    name: rpcbind
+    state: started
+    enabled: yes
+   tags:
+    - start_rpc
+
+ - name: start rpcbind centos 6.X
+   when: ansible_distribution_major_version == "6"
+   service:
+    name: rpcbind
+    state: started
+    enabled: yes
+
+ - name: remove old jdk
+   yum:
+    name: "{{item}}"
+    state: absent
+   with_items:
+    - java
+    - jdk
+
+ - name: pre-install jdk
+   copy:
+    src: '{{cdh_packages_dir}}{{jdk}}'
+    dest: /tmp/cdh/
+    
+ - name: install jdk
+   yum:
+    name: /tmp/cdh/jdk-7u80-linux-x64.rpm
+
+ - name: set jdk env
+   lineinfile:
+     path: /etc/profile
+     line: '{{item}}'
+   with_items:
+    - '#set java environment'
+    - 'export JAVA_HOME=/usr/java/jdk1.7.0_80'
+    - 'export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar'
+    - 'export PATH=$PATH:$JAVA_HOME/bin'

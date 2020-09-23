@@ -1,0 +1,37 @@
+---
+- name: create parcel-repo
+  file:
+   path: /opt/cloudera/parcel-repo
+   owner: cloudera-scm
+   group: cloudera-scm
+
+- name: copy file to parcel-repo
+  copy:
+   src: '{{item}}'
+   dest: "/opt/cloudera/parcel-repo/{{ item | basename | regex_replace('.sha1','.sha') }}"
+   owner: cloudera-scm
+   group: cloudera-scm
+  with_fileglob:
+   - '{{cdh_packages_dir}}/CDH*'
+   - '{{cdh_packages_dir}}/mani*'
+  tags:
+   - skip_task
+
+- name: init cm
+  shell: "{{cm_path.stdout}}/share/cmf/schema/scm_prepare_database.sh mysql -h{{groups['namenode'][0]}} -uroot -p{{cdh_mysql_password}} --scm-host {{groups['namenode'][0]}} scmdbn scmdbu scmdbp"
+  tags:
+   - skip_task
+
+- name: modify cloudera-scm-server
+  lineinfile:
+   path: '{{cm_path.stdout}}/etc/init.d/cloudera-scm-server'
+   regexp: '^CMF_DEFAULTS'
+   line: 'CMF_DEFAULTS={{cm_path.stdout}}/etc/default'
+
+- name: add to rc.local
+  lineinfile:
+   path: /etc/rc.local
+   line: '{{cm_path.stdout}}/etc/init.d/cloudera-scm-server start'
+
+- name: start cm server
+  shell: '{{cm_path.stdout}}/etc/init.d/cloudera-scm-server start'

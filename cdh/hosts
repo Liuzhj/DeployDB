@@ -1,0 +1,16 @@
+[allnode]
+gs-ad-cdh-master ansible_host=10.200.60.44
+gs-ad-cdh-standby ansible_host=10.200.60.45
+gs-ad-cdh-datanode1 ansible_host=10.200.60.46
+gs-ad-cdh-datanode2 ansible_host=10.200.60.47
+gs-ad-cdh-datanode3 ansible_host=10.200.60.48
+
+[namenode]
+gs-ad-cdh-master
+
+[cluster:children]
+allnode
+
+[cluster:vars]
+ansible_user=root
+ansible_ssh_pass='rawdblzj'

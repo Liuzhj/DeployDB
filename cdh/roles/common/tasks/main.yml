@@ -1,0 +1,127 @@
+---
+- name: create tmp dir
+  file:
+    path: /tmp/cdh
+    state: directory
+  tags:
+   - create_tmpdir
+
+- name: set selinux
+  lineinfile:
+   dest: /etc/selinux/config
+   regexp: '^SELINUX='
+   line: 'SELINUX=disabled'
+  tags:
+    - selinux
+
+- name: stop firewalld (centos 7.X)
+  when: ansible_distribution_major_version == "7"
+  systemd:
+   name: firewalld
+   state: stopped
+   enabled: no
+  tags:
+   - iptables
+
+- name: stop iptables (centos 6.X)
+  when: ansible_distribution_major_version == "6"
+  service:
+   name: iptables
+   state: stopped
+   enabled: no
+
+- name: set pam.d
+  pamd:
+   name: login
+   type: session
+   control: required
+   module_path: pam_loginuid.so
+   state: after
+   new_control: required
+   new_type: session
+   new_module_path: pam_limits.so
+
+- name: set litmit.conf
+  lineinfile:
+   dest:  /etc/security/limits.conf
+   line: '{{item}}'
+  with_items:
+   - '* soft nofile 655350'
+   - '* hard nofile 655350'
+   - '* soft nproc 655350'
+   - '* hard nproc 655350'
+   - '*  soft  memlock 5242880'
+   - '*  hard  memlock 5242880'
+
+- name: set proc.conf (centos 7.X)
+  when: ansible_distribution_major_version == "7"
+  lineinfile:
+   path: '/etc/security/limits.d/20-nproc.conf'
+   regexp: '^\*' 
+   line: '*          soft    nproc     655350'
+
+- name: set proc.conf (centos 6.X)
+  when: ansible_distribution_major_version == "6"
+  lineinfile:
+   path: '/etc/security/limits.d/90-nproc.conf'
+   regexp: '^\*' 
+   line: '*          soft    nproc     655350'
+
+- name: set python env
+  template:
+    src: sitecustomize.py 
+    dest: "/usr/lib/python{{ansible_python.version.major}}.{{ansible_python.version.minor}}/site-packages/"
+
+- name: set swap
+  lineinfile:
+   path: /etc/sysctl.conf
+   line: 'vm.swappiness=10'
+  tags:
+   - set_swap
+
+- name: set swappiness
+  shell: "echo 10 >> /proc/sys/vm/swappiness"
+  tags:
+   - skip_task
+
+- name: copy disable THP script to remote
+  template:
+   src: disable-transparent-hugepages.sh
+   dest: /tmp/cdh
+
+- name: exec THP.sh
+  shell: sh /tmp/cdh/disable-transparent-hugepages.sh
+  tags:
+   - skip_task
+
+- name: add host
+  lineinfile:
+   path: /etc/hosts
+   regexp: '.*{{ item }}$'
+   line: "{{ hostvars[item].ansible_host }} {{item}}"
+  when: hostvars[item].ansible_host is defined
+  with_items: "{{ groups['cdh'] }}"
+
+- name: create .ssh directory
+  file:
+   path: ~/.ssh
+   state: directory
+   mode: 0700
+
+- name: copy key pairs to remote
+  template:
+   src: '{{ item.src}}'
+   dest: '~/.ssh/{{ item.dest }}'
+   mode: '{{ item.mode }}'
+  with_items:
+   - { src: 'id_rsa', dest: 'id_rsa', mode: '600' }
+   - { src: 'id_rsa.pub', dest: 'id_rsa.pub', mode: '644' }
+   - { src: 'id_rsa.pub', dest: 'authorized_keys', mode: '644' }
+
+- name: set ntp
+  template:
+   src: ntp.conf
+   dest: /etc
+   backup: yes
+  notify:
+   - restart ntp service

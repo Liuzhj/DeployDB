@@ -1,0 +1,12 @@
+---
+- name: restart ntp service
+  service:
+   name: ntpd
+   state: restarted
+   enabled: yes
+
+- name: restart crontab service
+  service:
+   name: crond
+   state: restarted
+   enabled: yes

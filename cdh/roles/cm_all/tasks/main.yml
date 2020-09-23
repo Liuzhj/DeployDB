@@ -1,0 +1,75 @@
+---
+ - name: unarchive cm package
+   unarchive:
+    src: '{{cdh_packages_dir}}{{cm_package}}'
+    dest: /opt/
+   tags:
+    - skip_task
+
+ - name: get cm path
+   shell: ls -d /opt/cm-*
+   register: cm_path
+
+ - name: modify cloudera-scm-agent
+   lineinfile:
+     path: '{{cm_path.stdout}}/etc/default/cloudera-scm-agent'
+     regexp: '^export CMF_VAR'
+     line: 'export CMF_VAR=/var'
+ 
+ - name: copy lib,log
+   shell: '{{item}}'
+   with_items:
+    - cp -rf {{cm_path.stdout}}/lib/* /var/lib/  
+    - cp -rf {{cm_path.stdout}}/log/* /var/log/
+   tags: skip_task
+
+ - name: create cloudera-scm user
+   user:
+    home: '{{cm_path.stdout}}/run/cloudera-scm-server'
+    # create_home: no
+    createhome: no
+    shell: /sbin/nologin
+    comment: 'Cloudera SCM User'
+    system: yes
+    name: cloudera-scm
+
+ - name: change cm-dir owner
+   file:
+    path: '{{item}}'
+    owner: cloudera-scm
+    group: cloudera-scm
+    recurse: yes
+   with_items:
+    - '{{cm_path.stdout}}'
+    - /opt/cloudera
+
+ - name: modify server_host
+   lineinfile:
+    path: '{{cm_path.stdout}}/etc/cloudera-scm-agent/config.ini'
+    regexp: '^server_host'
+    line: "server_host={{groups['namenode'][0]}}"
+
+ - name: create parcels
+   file:
+    path: /opt/cloudera/parcels
+    owner: cloudera-scm
+    group: cloudera-scm
+    state: directory
+
+ - name: mkdir {{cm_path.stdout}}
+   file:
+    path: /opt/cloudera-manager/{{ cm_path.stdout.split("/")[2] }}/run/cloudera-scm-agent
+    owner: cloudera-scm
+    group: cloudera-scm
+    state: directory
+
+ - name: modify cloudera-scm-agent
+   lineinfile:
+    path: '{{cm_path.stdout}}/etc/init.d/cloudera-scm-agent'
+    regexp: '^CMF_DEFAULTS'
+    line: 'CMF_DEFAULTS={{cm_path.stdout}}/etc/default'
+
+ - name: add to rc.local
+   lineinfile:
+    path: /etc/rc.local
+    line: '{{cm_path.stdout}}/etc/init.d/cloudera-scm-agent start'

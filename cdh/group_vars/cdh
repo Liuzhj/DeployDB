@@ -1,0 +1,8 @@
+# cdh
+cdh_packages_dir: /usr/local/src/cdh/
+jdk: jdk-7u80-linux-x64.rpm
+mysql: MySQL-5.6.26-1.linux_glibc2.5.x86_64.rpm-bundle.tar
+mysql_connector_java: mysql-connector-java-5.1.36.tar.gz
+# cm_package: cloudera-manager-el6-cm5.7.2_x86_64.tar.gz
+cm_package: cloudera-manager-el6-cm5.14.3_x86_64.tar.gz
+cdh_mysql_password: rawdblzj

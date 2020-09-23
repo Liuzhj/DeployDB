@@ -1,0 +1,98 @@
+---
+ - name: remove old mysql
+   yum:
+     name: 'mysql*'
+     state: absent
+
+ - name: pre-install mysql
+   unarchive:
+    src: '{{cdh_packages_dir}}{{mysql}}'
+    dest: /tmp/cdh/
+   tags:
+    - skip_task
+
+ - name: get mysql pkgs
+   shell: ls /tmp/cdh/MySQL*
+   register: pkgs
+
+ - name: install mysql
+   yum:
+    name: '{{item}}'
+   with_items:
+    - '{{pkgs.stdout_lines}}'
+   
+ - name: set my.cnf
+   template:
+     src: my.cnf
+     dest: /etc/
+
+ - name: stop mysql centos 7.X
+   when: ansible_distribution_major_version == "7"
+   systemd:
+    name: mysql
+    state: stopped
+    enabled: yes
+
+ - name: stop mysql centos 6.X
+   when: ansible_distribution_major_version == "6"
+   service:
+    name: mysql
+    state: stopped
+    enabled: yes
+
+ - name: init mysql
+   shell: /usr/bin/mysql_install_db
+   tags:
+    - skip_task
+
+ - name: restart mysql
+   when: ansible_distribution_major_version == "7"
+   systemd:
+    name: mysql
+    state: restarted
+    enabled: yes
+
+ - name: restart mysql
+   when: ansible_distribution_major_version == "6"
+   service:
+    name: mysql
+    state: restarted
+    enabled: yes
+
+ - name: get mysql random password
+   shell: awk '/#/{print $NF}' /root/.mysql_secret 
+   register: password
+
+ - name: copy file to remote
+   template: 
+    src: '{{item}}'
+    dest: /tmp/cdh/
+   with_items:
+    - mysql_security.sh
+    - set_root_pwd.sh
+
+ - name: mysql security
+   shell: sh /tmp/cdh/{{item}}
+   with_items:
+    - mysql_security.sh
+    - set_root_pwd.sh
+   tags:
+    - skip_task
+
+ - name: unarchive mysql-connecter
+   unarchive:
+    src: '{{cdh_packages_dir}}{{mysql_connector_java}}'
+    dest: /tmp/cdh/
+   tags:
+    - skip_task
+
+ - name: mkdir /usr/share/java
+   file:
+    path: /usr/share/java
+    state: directory
+   
+ - name: copy mysql-connecter
+   copy:
+    remote_src: yes
+    src: '/tmp/cdh/{{ mysql_connector_java | regex_replace(".tar.gz","/") }}{{ mysql_connector_java | regex_replace(".tar.gz","-bin.jar") }}'
+    dest: /usr/share/java/{{ mysql_connector_java | regex_replace("-[0-9]+.*",".jar") }}

@@ -1,0 +1,32 @@
+---
+ - hosts: allnodes
+   remote_user: root
+   vars_files:
+    - ../../../config.yaml
+   roles:
+    - common
+    - jdk
+    - cm_all
+
+ - hosts: namenode
+   remote_user: root
+   vars_files:
+    - ../../../config.yaml
+   roles:
+    - mysql
+    - cm_master
+
+ - hosts: allnodes
+   remote_user: root
+   vars_files:
+    - ../../../config.yaml
+   tasks:
+    - name: start cm agent
+      shell: '{{cm_path.stdout}}/etc/init.d/cloudera-scm-agent start'
+
+    - name: clear temp file
+      file:
+       path: /tmp/cdh
+       state: absent
+      tags:
+       - clean_tmpfile
