@@ -1,0 +1,12 @@
+redis_version
+os
+arch_bits
+process_id
+run_id
+tcp_port
+uptime_in_days
+connected_clients
+blocked_clients
+used_memory_human
+role
+connected_slaves
